@@ -39,7 +39,7 @@ def to_array(x):
 #     raise ValueError(f"Unsupported labels shape {y.shape}")
 
 # ---------------- 配置区 ----------------
-ROOT = "/kaggle/input/datasets/niaosilius/2324-select-droptrain/stations_2324_select_drop(train)"   # 
+ROOT = "/kaggle/input/datasets/niaosilius/stations-2324-train-drop-title/stations_2324_train_drop"   # 
 # ROOT = "/thfs1/home/qx_hyt/hpp/data/station_AI/train_data2"   
 csv_path = "2023.csv"  
 VARS = ("10u", "10v")                                        
