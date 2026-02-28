@@ -431,6 +431,10 @@ def train_and_evaluate_from_npy(
 
     y_train, y_mean, y_std = standardize(y_train)
     y_val = (y_val - y_mean)/y_std
+    
+    y_mean_t = torch.as_tensor(y_mean, dtype=torch.float32, device=device)
+    y_std_t  = torch.as_tensor(y_std,  dtype=torch.float32, device=device)
+    
     np.save(f"{out_dir}y_mean.npy", y_mean.astype(np.float32))
     np.save(f"{out_dir}y_std.npy", y_std.astype(np.float32))
 ########################
@@ -509,7 +513,20 @@ def train_and_evaluate_from_npy(
             hist_b, nwp_b, coord_b, y_b = hist_b.to(device), nwp_b.to(device), coord_b.to(device), y_b.to(device)
             y_b = y_b.squeeze(-1) 
             out = model(coord_b, hist_b, nwp_b)
-            loss = criterion(out, y_b)
+            
+            y_true_phys = y_b * y_std_t + y_mean_t   # [B, F]，单位 m/s
+            # 分段权重（你可以自己调）
+            w = torch.ones_like(y_true_phys)
+            w = torch.where(y_true_phys >= 6.0,  torch.full_like(w, 1.5), w)
+            w = torch.where(y_true_phys >= 10.8, torch.full_like(w, 4.0), w)
+            w = torch.where(y_true_phys >= 14.0, torch.full_like(w, 8.0), w)
+            # 分段加权 L1
+            # err = torch.abs(out - y_b)              # 仍在标准化空间算误差（没问题）
+            # loss = (w * err).sum() / (w.sum() + 1e-8)
+            err_phys = torch.abs((out - y_b) * y_std_t)   # 误差单位 m/s
+            loss = (w * err_phys).sum() / (w.sum() + 1e-8)
+              
+            # loss = criterion(out, y_b)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -524,7 +541,20 @@ def train_and_evaluate_from_npy(
                 hist_b, nwp_b, coord_b, y_b = hist_b.to(device), nwp_b.to(device), coord_b.to(device), y_b.to(device)
                 y_b = y_b.squeeze(-1) 
                 out = model(coord_b, hist_b, nwp_b)
-                loss = criterion(out, y_b)
+            
+                y_true_phys = y_b * y_std_t + y_mean_t   # [B, F]，单位 m/s
+                # 分段权重（你可以自己调）
+                w = torch.ones_like(y_true_phys)
+                w = torch.where(y_true_phys >= 6.0,  torch.full_like(w, 1.5), w)
+                w = torch.where(y_true_phys >= 10.8, torch.full_like(w, 4.0), w)
+                w = torch.where(y_true_phys >= 14.0, torch.full_like(w, 8.0), w)
+                # 分段加权 L1
+                # err = torch.abs(out - y_b)              # 仍在标准化空间算误差（没问题）
+                # loss = (w * err).sum() / (w.sum() + 1e-8)
+                err_phys = torch.abs((out - y_b) * y_std_t)   # 误差单位 m/s
+                loss = (w * err_phys).sum() / (w.sum() + 1e-8)
+                
+                # loss = criterion(out, y_b)
                 totv += loss.item()
         avg_val = totv/len(val_loader)
         val_losses.append(avg_val)
