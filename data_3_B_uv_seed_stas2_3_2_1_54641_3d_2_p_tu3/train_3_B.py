@@ -22,7 +22,7 @@ from data_3_B import standardize
 import random
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
-out_dir = "/kaggle/working/2324_drop/"
+out_dir = "/kaggle/working/select/"
 os.makedirs(out_dir, exist_ok=True)
 ##########################################################################################
 def stitch_overlapping_forecasts(y_windows):
